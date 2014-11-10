@@ -19,15 +19,19 @@ const Script = Class("Script", {
         plugins.contexts[file.path] = this;
         this.NAME = file.leafName.replace(/\..*/, "").replace(/-([a-z])/g, function (m, n1) n1.toUpperCase());
         this.PATH = file.path;
+        this.TARGET = file.getTarget();
         this.toString = this.toString;
         this.__context__ = this;
         this.__proto__ = plugins;
 
         // This belongs elsewhere
+        let tmpFollowLinks = file.followLinks;
+        file.followLinks = false;
         for (let dir of io.getRuntimeDirectories("plugin")) {
             if (dir.contains(file, false))
                 plugins[this.NAME] = this;
         }
+        file.followLinks = tmpFollowLinks;
         return this;
     }
 });
@@ -59,6 +63,7 @@ const File = Class("File", {
             else
                 file.initWithPath(expandedPath);
         }
+        file.followLinks = true;
         let self = XPCNativeWrapper(file);
         self.__proto__ = File.prototype;
         return self;
@@ -185,7 +190,9 @@ const File = Class("File", {
             ofstream.close();
         }
         return true;
-    }
+    },
+
+    getTarget: function () this.isSymlink() ? this.target : this.path
 }, {
     /**
      * @property {number} Open for reading only.
@@ -659,10 +666,10 @@ lookup:
             // liberator.echomsg("Sourcing \"" + filename + "\" ...");
 
             let str = file.read();
-            let uri = services.get("io").newFileURI(file);
+            let uri = services.get("io").newFileURI(File(file.getTarget()));
 
             // handle pure JavaScript files specially
-            if (/\.js$/.test(filename)) {
+            if (/\.js$/.test(file.getTarget())) {
                 try {
                     // Workaround for SubscriptLoader caching.
                     let suffix = '?' + encodeURIComponent(services.get("UUID").generateUUID().toString());
@@ -678,7 +685,7 @@ lookup:
                     throw err;
                 }
             }
-            else if (/\.css$/.test(filename))
+            else if (/\.css$/.test(file.getTarget()))
                 storage.styles.registerSheet(uri.spec, false, true);
             else {
                 let heredoc = "";

@@ -669,7 +669,7 @@ const Liberator = Module("liberator", {
 
             liberator.log("Sourcing plugin directory: " + dir.path + "...");
             dir.readDirectory(true).forEach(function (file) {
-                if (file.isFile() && /\.(js|vimp)$/i.test(file.path) && !(file.path in liberator.pluginFiles)) {
+                if (file.isFile() && /\.(js|vimp)$/i.test(file.getTarget()) && !(file.path in liberator.pluginFiles)) {
                     try {
                         io.source(file.path, false);
                         liberator.pluginFiles[file.path] = true;
